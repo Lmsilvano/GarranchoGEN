@@ -141,3 +141,62 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# Next.js generated types
+next-env.d.ts
+
+# Local DATA_DIR default (see .env.example) and e2e fixture state
+/tmp-data
+/e2e/.fixture-state.json
+
+# --- Public repo: secrets, AI tooling, docs, tasks, tests, and local-dev tools ---
+
+# Secrets and credentials (beyond dotenv block above)
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets/
+
+# AI / agent tooling
+.cursor/
+.claude/
+.cursorrules
+.windsurf/
+.continue/
+.aider*
+.agents/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.mcp.json
+mcp.json
+
+# Specs, plans, and phase prompts
+/docs/
+/tasks/
+
+# Tests and test runners
+/tests/
+/e2e/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+/vitest.config.ts
+/playwright.config.ts
+
+# Local-dev tooling (app build + production compose stay tracked)
+/eslint.config.mjs
+/scripts/
+/docker-compose.dev.yml
+*.code-workspace
+.vscode/
+.idea/

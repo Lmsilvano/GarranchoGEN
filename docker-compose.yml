@@ -1,0 +1,146 @@
+name: garranchogen
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${APP_IMAGE:-garranchogen-app:local}
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      DATA_DIR: ${DATA_DIR:-/data}
+      # Derived from the database/auth-ldap credentials below so connection
+      # strings live in one place instead of being duplicated in .env.
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@database:27017/${MONGO_INITDB_DATABASE}?authSource=admin
+      SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS}
+      LDAP_URL: ldap://auth-ldap:389
+      LDAP_BASE_DN: ${LDAP_BASE_DN}
+      LDAP_USER_DN_TEMPLATE: ${LDAP_USER_DN_TEMPLATE}
+      LDAP_REVALIDATE_SECONDS: ${LDAP_REVALIDATE_SECONDS}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      GEMINI_MAX_CONCURRENT: ${GEMINI_MAX_CONCURRENT}
+      GEMINI_RETRY_BASE_MS: ${GEMINI_RETRY_BASE_MS}
+      GEMINI_RETRY_MAX_MS: ${GEMINI_RETRY_MAX_MS}
+      GEMINI_MAX_ATTEMPTS: ${GEMINI_MAX_ATTEMPTS}
+      GEMINI_TIMEOUT_MS: ${GEMINI_TIMEOUT_MS}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES}
+      NEXT_PUBLIC_MAX_UPLOAD_EDGE_PX: ${NEXT_PUBLIC_MAX_UPLOAD_EDGE_PX}
+      JOB_LOCK_TTL_MS: ${JOB_LOCK_TTL_MS}
+      JOB_POLL_INTERVAL_MS: ${JOB_POLL_INTERVAL_MS}
+    volumes:
+      - app_data:/data
+    depends_on:
+      database:
+        condition: service_healthy
+      auth-ldap:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  database:
+    image: mongo:7.0
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --eval "db.adminCommand('ping')"
+          -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # No host port published — Mongo is only reachable from the backend network.
+
+  auth-ldap:
+    image: vegardit/openldap:2.6.10
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      LDAP_INIT_ORG_DN: ${LDAP_BASE_DN}
+      LDAP_INIT_ORG_NAME: ${LDAP_INIT_ORG_NAME}
+      LDAP_INIT_ROOT_USER_DN: ${LDAP_INIT_ROOT_USER_DN}
+      LDAP_INIT_ROOT_USER_PW: ${LDAP_INIT_ROOT_USER_PW}
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      # First-init only: anonymous-read ACL on ou=groups for revalidateRoles().
+      - ./deploy/ldap/init_mdb_acls.ldif:/opt/ldifs/init_mdb_acls.ldif:ro
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "", "-s", "base"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  ldap-ui:
+    image: phpldapadmin/phpldapadmin:latest
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      APP_KEY: ${LDAP_UI_APP_KEY}
+      LDAP_HOST: auth-ldap
+      LDAP_PORT: "389"
+      LDAP_BASE_DN: ${LDAP_BASE_DN}
+      LDAP_USERNAME: ${LDAP_INIT_ROOT_USER_DN}
+      LDAP_PASSWORD: ${LDAP_INIT_ROOT_USER_PW}
+    depends_on:
+      auth-ldap:
+        condition: service_healthy
+    # Loopback-only: local/SSH-tunnel admin access, never routed through the
+    # public reverse proxy (see deploy/Caddyfile and docs/deploy.md).
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  reverse-proxy:
+    image: caddy:2.11
+    restart: unless-stopped
+    networks:
+      - frontend
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  mongo_data:
+  ldap_data:
+  ldap_config:
+  # Bind-mount override for backup-friendliness on the VPS — see docs/deploy.md.
+  app_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,24 @@
+# GarranchoGEN reverse proxy (ADR-0004: Caddy, not Nginx, is the default).
+#
+# {$DOMAIN} must resolve to this host for Caddy's automatic HTTPS (HTTP-01
+# challenge on ports 80/443) to succeed. For a domain behind a CDN/firewall
+# that blocks inbound 80/443, or for wildcard certs, switch to a DNS-01
+# challenge instead — that requires building Caddy with the matching DNS
+# provider module (see https://caddyserver.com/docs/automatic-https#dns-challenge)
+# and is an ops decision left open for this phase; example shape:
+#
+# {$DOMAIN} {
+#   tls {
+#     dns <provider> {env.DNS_PROVIDER_API_TOKEN}
+#   }
+#   encode gzip zstd
+#   reverse_proxy app:3000
+# }
+
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app:3000
+}
+
+# ldap-ui is intentionally not routed here — it is only reachable via the
+# loopback-bound port published in docker-compose.yml (127.0.0.1:8081).
