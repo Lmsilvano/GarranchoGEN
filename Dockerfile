@@ -3,17 +3,20 @@
 FROM node:22-alpine AS base
 # Needed for some native addons on musl libc (sharp, later phases)
 RUN apk add --no-cache libc6-compat
+# Ativa o shim do Yarn pinado em package.json#packageManager
+RUN corepack enable
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json yarn.lock ./
+COPY scripts/assert-yarn.mjs ./scripts/assert-yarn.mjs
+RUN yarn install --frozen-lockfile
 
 FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN yarn build
 
 FROM base AS runner
 WORKDIR /app

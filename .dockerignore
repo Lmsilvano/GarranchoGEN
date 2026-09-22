@@ -3,6 +3,9 @@ node_modules
 .next
 out
 
+# npm lockfile — this repo is Yarn-only, must never leak into the build context
+package-lock.json
+
 # Version control
 .git
 .gitignore

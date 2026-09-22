@@ -23,23 +23,25 @@ qualquer área:
 ## Requisitos
 
 - Node.js 22 ou superior
-- npm
+- Yarn (Classic v1) — ative via `corepack enable`; a versão fica pinada em
+  `package.json#packageManager`. Este repositório é **Yarn-only**: `npm`/`npx`/`pnpm` são
+  bloqueados por um guard de `preinstall`.
 
 ## Comandos
 
 ```bash
-npm install
-npm run dev        # servidor de desenvolvimento
-npm run build      # build de produção
-npm run start      # serve o build
-npm run lint       # ESLint
-npm run typecheck  # tsc --noEmit
-npm test           # Vitest (unit/integration)
-npm run test:e2e   # Playwright (e2e)
+yarn
+yarn dev        # servidor de desenvolvimento
+yarn build      # build de produção
+yarn start      # serve o build
+yarn lint       # ESLint
+yarn typecheck  # tsc --noEmit
+yarn test       # Vitest (unit/integration)
+yarn test:e2e   # Playwright (e2e)
 ```
 
-Os browsers do Playwright não são baixados pelo `npm install`. Antes do primeiro
-`npm run test:e2e`, rode `npx playwright install`.
+Os browsers do Playwright não são baixados pelo `yarn`. Antes do primeiro
+`yarn test:e2e`, rode `yarn playwright install`.
 
 ## Configuração
 
@@ -58,7 +60,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml config
 docker build -t garranchogen-app:local .
 # Infra local (Mongo/LDAP em loopback) + seed:
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d database auth-ldap ldap-ui
-npm run seed:ldap
+yarn seed:ldap
 ```
 
 Fluxo completo de deploy (build → push → pull → up), topologia, URIs host vs

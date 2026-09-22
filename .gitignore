@@ -50,6 +50,10 @@ web_modules/
 # Optional npm cache directory
 .npm
 
+# npm lockfiles — this repo is Yarn-only, npm install must never regenerate these
+package-lock.json
+npm-shrinkwrap.json
+
 # Optional eslint cache
 .eslintcache
 
