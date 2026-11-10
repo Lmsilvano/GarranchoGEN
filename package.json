@@ -27,7 +27,7 @@
     "iron-session": "^9.0.1",
     "ldapts": "^9.2.0",
     "lucide-react": "^1.47.0",
-    "mongoose": "^9.10.1",
+    "mongoose": "^9.11.4",
     "next": "16.3.5",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
